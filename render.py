@@ -20,14 +20,50 @@ import pandas as pd
 from matplotlib.colors import to_hex, to_rgb
 
 from cluster import LABELS_PARQUET
-from common import ENTRIES_PARQUET, ROOT, write_bytes_atomic
+from common import EDITION, ENTRIES_PARQUET, ROOT, write_bytes_atomic
 from enrich import ENRICHMENT_PARQUET
 
 DOCS = ROOT / "docs"
 OUTPUT = DOCS / "index.html"
 SOCIAL_PREVIEW = DOCS / "social-preview.png"
 PUBLIC_URL = "https://stevenfazzio.com/sep-datamap/"
-TITLE = "A Map of the Stanford Encyclopedia of Philosophy"
+TITLE = "Stanford Encyclopedia of Philosophy Map"
+
+# Type: a serif title reads as a reference work to this map's humanities audience,
+# while labels and hovercards stay in a sans, which holds up small, bold, and
+# outlined over points and is quicker to scan. The two are a designed pair.
+# Source Sans *Pro*, the earlier release of Source Sans 3: DataMapPlot writes the
+# family name unquoted into CSS and into deck.gl's canvas font string, and a name
+# token starting with a digit is invalid there. "Source Sans 3" fell back to Times
+# in the page and to the canvas default "10px sans-serif" for the region labels.
+BODY_FONT = "Source Sans Pro"  # DataMapPlot loads it (labels, subtitle, hovercards)
+TITLE_FONT_CSS = (
+    "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500"
+    "&display=swap"
+)
+SEASONS = {"spr": "Spring", "sum": "Summer", "fall": "Fall", "win": "Winter"}
+
+# DataMapPlot sets line-height 0.95 on its panels, so a wrapped title's descenders
+# run into the subtitle. The pill styling matches huggingface-dataset-map's badge.
+CUSTOM_CSS = """
+#main-title {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  font-weight: 500 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.01em;
+  /* When it wraps on laptop-width screens, split evenly rather than strand "Map". */
+  text-wrap: balance;
+}
+#main-title + br + span {
+  display: inline-block; margin-top: 4px; line-height: 1.3; text-wrap: pretty;
+}
+.title-pill {
+  display: inline-block; margin: 8px 6px 0 0; padding: 3px 10px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #636c76; background: rgba(99, 108, 118, 0.08);
+  border: 1px solid rgba(99, 108, 118, 0.15); border-radius: 12px;
+}
+"""
 
 ENTRY_TYPE_LABELS = {
     "philosopher": "Philosopher",
@@ -204,6 +240,19 @@ def credit(row) -> str:
     return " · ".join(p for p in [names, ", ".join(dates)] if p)
 
 
+def edition_label(edition: str) -> str:
+    """'fall2026' -> 'Fall 2026 edition'."""
+    season, year = edition[:-4], edition[-4:]
+    return f"{SEASONS[season]} {year} edition"
+
+
+def title_pills() -> str:
+    # The edition, not a fetch date: the corpus is pinned to that archive snapshot.
+    pills = [edition_label(EDITION), "Unofficial"]
+    spans = "".join(f'<span class="title-pill">{html.escape(p)}</span>' for p in pills)
+    return f"<div>{spans}</div>"
+
+
 def open_graph_tags(n_entries: int) -> str:
     og = {
         "og:title": TITLE,
@@ -336,13 +385,20 @@ def main():
         cvd_safer=True,
         title=TITLE,
         sub_title=(
-            f"{len(df):,} entries from the Fall 2026 edition, placed by the meaning "
-            "of each entry's lead section. Unofficial; click a point to open the entry."
+            f"{len(df):,} entries, placed by the meaning of their lead sections. "
+            # Nothing else says clicking works: deck.gl shows a grab cursor on points.
+            # Kept short enough to stay on one line at 1280 px, where a second line
+            # pushes the panel over the top region label.
+            "Click one to open it."
         ),
         # The defaults (36/18) make the title panel cover the top of the map and
         # collide with the colormap legend on laptop-width screens.
-        title_font_size=26,
-        sub_title_font_size=14,
+        title_font_size=24,
+        sub_title_font_size=13,
+        font_family=BODY_FONT,
+        tooltip_font_family=BODY_FONT,
+        tooltip_font_weight=400,
+        custom_css=CUSTOM_CSS,
         noise_label="Unlabelled",
     )
 
@@ -359,7 +415,22 @@ def main():
         )
         assert anchor is not None, "no <head> in the rendered page"
         at = anchor.end()
-        text = text[:at] + "\n" + open_graph_tags(len(df)) + text[at:]
+        head = (
+            open_graph_tags(len(df))
+            + '\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+            + f'\n<link rel="stylesheet" href="{TITLE_FONT_CSS}">'
+        )
+        text = text[:at] + "\n" + head + text[at:]
+        # Pills go inside the title panel, after the subtitle; the panel holds only
+        # spans, so its first closing </div> is its own.
+        text, n = re.subn(
+            r'(<div\s+id="title-container"[^>]*>.*?)(</div>)',
+            lambda m: m.group(1) + title_pills() + m.group(2),
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
+        assert n == 1, "title panel not found for the pills"
         write_bytes_atomic(text.encode("utf-8"), OUTPUT)
     finally:
         os.unlink(tmp)
