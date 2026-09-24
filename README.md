@@ -45,3 +45,8 @@ uv run social_preview.py
 
 Intermediate data lives in `data/` and is not committed. Embeddings and LLM
 responses are cached on disk, so re-running a stage does not repeat paid calls.
+
+## License
+
+The code is released under the [MIT License](LICENSE). The encyclopedia entries
+themselves belong to the SEP and their authors.

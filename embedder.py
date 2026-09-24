@@ -21,6 +21,10 @@ from tqdm import tqdm
 
 from common import DATA
 
+# The endpoint that built the published map (a RunPod load-balancer endpoint on
+# vllm/vllm-openai:v0.28.0 with `--runner pooling --convert embed`) was deleted
+# once the map was done. Anything already embedded comes from the disk cache;
+# embedding new text needs a new endpoint and its ID here.
 ENDPOINT_ID = "jxrvvepxi1lwkx"
 BASE_URL = f"https://{ENDPOINT_ID}.api.runpod.ai"
 HEALTH_URL = f"https://api.runpod.ai/v2/{ENDPOINT_ID}/health"
