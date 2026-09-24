@@ -122,9 +122,11 @@ NEUTRAL_COLORS = {
 }
 
 # Cards are read in quick succession while sweeping the mouse, so every card has
-# the same layout: type pill, title, summary, then labelled fields in fixed
-# places, then the credit line. The dots use the Subfield and Tradition colormap
-# colours so a card reads against whichever legend is showing.
+# the same layout: type pill, title, labelled fields, then the summary and the
+# credit line. The fields go above the summary because summaries run 2-5 lines:
+# below it, the fields jumped by up to 55 px from card to card; under the title
+# they move only when the title wraps. The dots use the Subfield and Tradition
+# colormap colours so a card reads against whichever legend is showing.
 DOT = (
     "display: inline-block; width: 8px; height: 8px; border-radius: 50%; "
     "margin-right: 6px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); "
@@ -137,15 +139,15 @@ HOVER_TEMPLATE = f"""
     border-radius: 999px; font-size: 11px; font-weight: 600;
     background: {{pill_bg}}; color: {{pill_fg}};">{{entry_type}}</span>
   <div style="font-weight: 600; font-size: 15px; line-height: 1.25;">{{title}}</div>
-  <div style="font-size: 13px; margin-top: 5px; line-height: 1.4;">{{summary}}</div>
   <div style="display: grid; grid-template-columns: 62px minmax(0, 1fr);
-    gap: 3px 10px; margin-top: 8px; padding-top: 7px; border-top: 1px solid #e5e7eb;
-    font-size: 12px; line-height: 1.35;">
+    gap: 3px 10px; margin-top: 6px; font-size: 12px; line-height: 1.35;">
     <div style="{FIELD_NAME}">Subfield</div>
     <div><span style="{DOT.format(color="{subfield_dot}")}"></span>{{subfield}}</div>
     <div style="{FIELD_NAME}">Tradition</div>
     <div><span style="{DOT.format(color="{tradition_dot}")}"></span>{{tradition}}</div>
   </div>
+  <div style="font-size: 13px; margin-top: 8px; padding-top: 7px;
+    border-top: 1px solid #e5e7eb; line-height: 1.4;">{{summary}}</div>
   <div style="color: #6b7280; font-size: 11px; margin-top: 7px;">{{credit}}</div>
 </div>
 """
