@@ -74,9 +74,11 @@ def main():
             page.goto(url, wait_until="load", timeout=120_000)
             page.wait_for_load_state("networkidle", timeout=45_000)
             page.wait_for_timeout(SETTLE_MS)
-            # DataMapPlot doesn't paint cluster labels until the view is touched; a
-            # small drag triggers it without changing the default framing (the same
-            # nudge stevenfazzio.github.io's thumbnail script uses).
+            # A small drag, as in stevenfazzio.github.io's thumbnail script, which uses
+            # it because older DataMapPlot builds didn't paint labels until the view
+            # was touched. datamapplot 0.7.3 paints them on load, so the drag isn't
+            # needed for that; it stays because the --zoom/--pan defaults were chosen
+            # with it in place (it shifts the view by 15 x 8 px).
             page.mouse.move(w / 2, h / 2)
             page.mouse.down()
             page.mouse.move(w / 2 + 15, h / 2 + 8, steps=6)
